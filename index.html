@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <meta name="theme-color" content="#1a4d36">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Greenspace · Professional Research Tool</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #1a4d36;
+            --primary-light: #2a7a55;
+            --primary-dark: #0f3324;
+            --secondary: #e8f0eb;
+            --accent: #f5a623;
+            --text: #1d2e26;
+            --text-light: #4d6e5d;
+            --text-white: #ffffff;
+            --shadow: 0 8px 40px rgba(0, 20, 10, 0.12);
+            --shadow-hover: 0 12px 48px rgba(0, 20, 10, 0.20);
+            --radius: 24px;
+            --radius-sm: 16px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f5f2;
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Welcome Screen */
+        .welcome-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            background: linear-gradient(160deg, #0a1f16 0%, #1a4d36 50%, #0f3324 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 1;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+
+        .welcome-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.05);
+        }
+
+        .welcome-content {
+            text-align: center;
+            padding: 40px 30px;
+            max-width: 520px;
+            animation: fadeInUp 1s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .welcome-logo {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid rgba(255,255,255,0.15);
+            margin-bottom: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            background: var(--primary-dark);
+        }
+
+        .welcome-title {
+            color: var(--text-white);
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .welcome-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 18px;
+            font-weight: 300;
+            margin-bottom: 8px;
+        }
+
+        .welcome-tagline {
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-style: italic;
+            opacity: 0.95;
+        }
+
+        .welcome-version {
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 32px;
+        }
+
+        .welcome-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .welcome-feature {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: var(--radius-sm);
+            padding: 16px 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .welcome-feature .icon {
+            font-size: 24px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .welcome-feature .label {
+            color: rgba(255,255,255,0.7);
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .welcome-enter-btn {
+            background: var(--text-white);
+            color: var(--primary);
+            border: none;
+            padding: 16px 48px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .welcome-enter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .welcome-enter-btn:active {
+            transform: scale(0.97);
+        }
+
+        .welcome-footer {
+            margin-top: 24px;
+            color: rgba(255,255,255,0.25);
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        /* App Container */
+        .app-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-top: 80px;
+        }
+
+        /* Header */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+            z-index: 1000;
+            padding: 0 20px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-content {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            object-fit: cover;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.3px;
+        }
+
+        .header-title span {
+            font-weight: 400;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .header-badge {
+            background: var(--secondary);
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--primary);
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+        }
+
+        /* Cards */
+        .card {
+            background: #ffffff;
+            border-radius: var(--radius);
+            padding: 28px 30px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(0,0,0,0.04);
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--secondary);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .card-header h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-badge {
+            background: var(--secondary);
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .badge {
+            background: var(--primary);
+            color: var(--text-white);
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        .form-group label .required {
+            color: #d9534f;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 15px;
+            font-family: inherit;
+            border: 2px solid #e8edeb;
+            border-radius: var(--radius-sm);
+            background: #fafcfa;
+            color: var(--text);
+            transition: var(--transition);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary-light);
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(42, 122, 85, 0.08);
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234d6e5d' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        input[type="color"] {
+            padding: 4px;
+            height: 48px;
+            cursor: pointer;
+        }
+
+        input[type="range"] {
+            padding: 0;
+            height: auto;
+            background: transparent;
+            border: none;
+            margin: 6px 0;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            background: var(--secondary);
+            border-radius: 4px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            cursor: pointer;
+            margin-top: -8px;
+            box-shadow: 0 2px 8px rgba(42, 122, 85, 0.3);
+        }
+
+        input[type="range"]::-moz-range-track {
+            height: 4px;
+            background: var(--secondary);
+            border-radius: 4px;
+            border: none;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            cursor: pointer;
+            border: none;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px 20px;
+            margin-bottom: 4px;
+        }
+
+        .range-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-light);
+            padding: 0 2px;
+        }
+
+        .abundance-display {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+            min-width: 30px;
+        }
+
+        /* GPS */
+        .gps-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .gps-row input {
+            flex: 2 1 200px;
+        }
+
+        .gps-row .btn-group {
+            display: flex;
+            gap: 8px;
+            flex: 1 1 auto;
+        }
+
+        .location-status {
+            font-size: 14px;
+            margin-top: 8px;
+            padding: 6px 14px;
+            background: var(--secondary);
+            border-radius: 12px;
+            display: inline-block;
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .mini-map {
+            height: 220px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            border: 2px solid #e8edeb;
+            margin-top: 10px;
+            background: var(--secondary);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+            padding: 12px 22px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: inherit;
+            text-decoration: none;
+            border: 2px solid transparent;
+            min-height: 48px;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--text-white);
+            box-shadow: 0 4px 16px rgba(26, 77, 54, 0.25);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(26, 77, 54, 0.30);
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+            color: var(--primary);
+            border-color: #d5e3db;
+        }
+
+        .btn-secondary:hover {
+            background: #dce9e1;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #fde8e8;
+            color: #a13d3d;
+            border-color: #f5d4d4;
+        }
+
+        .btn-danger:hover {
+            background: #f8d6d6;
+        }
+
+        .btn-success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #b8dac4;
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+            padding: 14px;
+            font-size: 16px;
+        }
+
+        .btn-sm {
+            padding: 6px 16px;
+            font-size: 12px;
+            min-height: 36px;
+        }
+
+        .action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .action-row .btn {
+            flex: 1 1 auto;
+            min-width: 90px;
+        }
+
+        .btn-icon {
+            font-size: 18px;
+        }
+
+        /* Photo Upload */
+        .photo-upload-area {
+            position: relative;
+            border: 2px dashed #d5e3db;
+            border-radius: var(--radius-sm);
+            padding: 20px;
+            text-align: center;
+            background: #fafcfa;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .photo-upload-area:hover {
+            border-color: var(--primary-light);
+            background: #f5faf7;
+        }
+
+        .photo-upload-area input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .photo-upload-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-light);
+            font-size: 14px;
+            pointer-events: none;
+        }
+
+        .photo-upload-label .upload-icon {
+            font-size: 32px;
+        }
+
+        .photo-preview {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .photo-preview img {
+            max-width: 180px;
+            max-height: 140px;
+            border-radius: var(--radius-sm);
+            border: 2px solid #e8edeb;
+            object-fit: cover;
+        }
+
+        .photo-preview .remove-photo {
+            color: #b34e4e;
+            font-weight: 500;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 12px;
+            border-radius: 30px;
+            background: #fde8e8;
+            transition: var(--transition);
+        }
+
+        .photo-preview .remove-photo:hover {
+            background: #f8d6d6;
+        }
+
+        /* Observation List */
+        .obs-list {
+            max-height: 560px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-right: 4px;
+        }
+
+        .obs-list::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        .obs-list::-webkit-scrollbar-track {
+            background: var(--secondary);
+            border-radius: 10px;
+        }
+
+        .obs-list::-webkit-scrollbar-thumb {
+            background: var(--primary-light);
+            border-radius: 10px;
+        }
+
+        .obs-item {
+            background: #fafffd;
+            border-radius: var(--radius-sm);
+            padding: 16px 18px;
+            border-left: 4px solid var(--primary-light);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: var(--transition);
+        }
+
+        .obs-item:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+        }
+
+        .obs-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 6px 12px;
+        }
+
+        .obs-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .obs-date {
+            font-size: 12px;
+            color: var(--text-light);
+            background: var(--secondary);
+            padding: 2px 12px;
+            border-radius: 30px;
+        }
+
+        .obs-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin-top: 6px;
+            font-size: 13px;
+            color: var(--text-light);
+        }
+
+        .obs-tag {
+            background: var(--secondary);
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .obs-photo {
+            max-width: 70px;
+            max-height: 70px;
+            border-radius: 12px;
+            margin-top: 8px;
+            border: 1px solid #e8edeb;
+            object-fit: cover;
+        }
+
+        .obs-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state .emoji {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 12px;
+        }
+
+        .empty-state .sub-text {
+            font-size: 14px;
+            color: #8a9e93;
+        }
+
+        /* Footer */
+        .app-footer {
+            margin-top: 20px;
+            padding: 24px 0 16px;
+            border-top: 2px solid #e8edeb;
+        }
+
+        .footer-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .footer-logo {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: cover;
+        }
+
+        .footer-info {
+            font-size: 14px;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .footer-info strong {
+            color: var(--text);
+        }
+
+        .footer-info a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .footer-info a:hover {
+            text-decoration: underline;
+        }
+
+        .footer-note {
+            font-size: 12px;
+            color: #8a9e93;
+            text-align: right;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary);
+            color: var(--text-white);
+            padding: 14px 28px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-hover);
+            font-weight: 500;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s ease;
+            z-index: 9999;
+            max-width: 420px;
+            font-size: 15px;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: #c0392b;
+        }
+
+        .toast.success {
+            background: var(--primary-light);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 12px;
+                padding-top: 76px;
+            }
+
+            .card {
+                padding: 18px 16px;
+                border-radius: 20px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .gps-row {
+                flex-direction: column;
+            }
+
+            .gps-row .btn-group {
+                width: 100%;
+            }
+
+            .gps-row .btn-group .btn {
+                flex: 1;
+            }
+
+            .action-row .btn {
+                min-width: 70px;
+                font-size: 12px;
+                padding: 10px 14px;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-note {
+                text-align: center;
+            }
+
+            .toast {
+                left: 20px;
+                right: 20px;
+                bottom: 20px;
+                font-size: 14px;
+                padding: 12px 20px;
+            }
+
+            .welcome-features {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .welcome-title {
+                font-size: 28px;
+            }
+
+            .welcome-logo {
+                width: 100px;
+                height: 100px;
+            }
+
+            .header-title {
+                font-size: 15px;
+            }
+
+            .header-title span {
+                font-size: 12px;
+            }
+
+            .header-badge {
+                font-size: 9px;
+                padding: 3px 10px;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .welcome-features {
+                grid-template-columns: 1fr;
+            }
+
+            .welcome-enter-btn {
+                padding: 14px 32px;
+                font-size: 16px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Welcome Screen -->
+    <div class="welcome-overlay" id="welcomeOverlay">
+        <div class="welcome-content">
+            <img src="assets/logo.png" alt="Greenspace" class="welcome-logo" id="welcomeLogo">
+            <h1 class="welcome-title">Greenspace</h1>
+            <p class="welcome-tagline">capture, preserve, grow knowledge</p>
+            <p class="welcome-subtitle">Professional Botanical Research Tool</p>
+            <p class="welcome-version">Version 3.0 · Ready for Production</p>
+            
+            <div class="welcome-features">
+                <div class="welcome-feature">
+                    <span class="icon">📍</span>
+                    <span class="label">GPS Tracking</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="icon">📸</span>
+                    <span class="label">Photo Capture</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="icon">📊</span>
+                    <span class="label">Data Export</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="icon">💾</span>
+                    <span class="label">Offline Storage</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="icon">🗺️</span>
+                    <span class="label">Interactive Maps</span>
+                </div>
+                <div class="welcome-feature">
+                    <span class="icon">📱</span>
+                    <span class="label">Mobile Optimized</span>
+                </div>
+            </div>
+
+            <button class="welcome-enter-btn" id="enterAppBtn">Launch Greenspace</button>
+            <p class="welcome-footer">Powered by Chuma Khuliso · University of Venda</p>
+        </div>
+    </div>
+
+    <!-- App Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="header-brand">
+                <img src="assets/logo-small.png" alt="Greenspace" class="header-logo" id="headerLogo">
+                <span class="header-title">Greenspace <span>· Research</span></span>
+            </div>
+            <span class="header-badge">v3.0 Pro</span>
+        </div>
+    </header>
+
+    <!-- Main App -->
+    <div class="app-container">
+
+        <!-- Main Card -->
+        <div class="card main-card">
+            <div class="card-header">
+                <h2>📋 New Observation</h2>
+                <span class="card-badge">Field Data Collection</span>
+            </div>
+
+            <div class="form-group">
+                <label for="plantName">🌱 Plant Name <span class="required">*</span></label>
+                <input type="text" id="plantName" placeholder="Scientific or common name..." />
+            </div>
+
+            <div class="form-group">
+                <label for="gpsInput">📍 GPS Coordinates</label>
+                <div class="gps-row">
+                    <input type="text" id="gpsInput" placeholder="e.g. -22.945, 30.494" />
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" id="getGpsBtn">
+                            <span class="btn-icon">📡</span> Get GPS
+                        </button>
+                        <button class="btn btn-secondary" id="copyCoordsBtn">
+                            <span class="btn-icon">📋</span> Copy
+                        </button>
+                    </div>
+                </div>
+                <div id="locationStatus" class="location-status">Press "Get GPS" or enter manually</div>
+                <div id="miniMap" class="mini-map"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="notesInput">📝 Field Notes</label>
+                <textarea id="notesInput" rows="3" placeholder="Habitat, phenology, habit, associated species..."></textarea>
+            </div>
+
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="soilType">🧪 Soil Type</label>
+                    <select id="soilType">
+                        <option value="">Select...</option>
+                        <option value="Sandy">Sandy</option>
+                        <option value="Clay">Clay</option>
+                        <option value="Loam">Loam</option>
+                        <option value="Peat">Peat</option>
+                        <option value="Silt">Silt</option>
+                        <option value="Chalk">Chalk</option>
+                        <option value="Laterite">Laterite</option>
+                        <option value="Alluvial">Alluvial</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="weatherSelect">☀️ Weather</label>
+                    <select id="weatherSelect">
+                        <option value="">Select...</option>
+                        <option value="Sunny">☀️ Sunny</option>
+                        <option value="Cloudy">⛅ Cloudy</option>
+                        <option value="Raining">🌧️ Raining</option>
+                        <option value="Windy">💨 Windy</option>
+                        <option value="Foggy">🌫️ Foggy</option>
+                        <option value="Overcast">☁️ Overcast</option>
+                        <option value="Clear">🌤️ Clear</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="slopeSelect">⛰️ Slope / Aspect</label>
+                    <select id="slopeSelect">
+                        <option value="">Select...</option>
+                        <option value="North-facing">North-facing</option>
+                        <option value="East-facing">East-facing</option>
+                        <option value="South-facing">South-facing</option>
+                        <option value="West-facing">West-facing</option>
+                        <option value="Flat / level">Flat / level</option>
+                        <option value="Gentle slope">Gentle slope</option>
+                        <option value="Steep slope">Steep slope</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="plantHeight">📏 Height (cm)</label>
+                    <input type="number" id="plantHeight" min="0" step="0.5" placeholder="e.g. 150" />
+                </div>
+
+                <div class="form-group">
+                    <label for="flowerColour">🌸 Flower Colour</label>
+                    <input type="color" id="flowerColour" value="#7f8c8d" />
+                </div>
+
+                <div class="form-group">
+                    <label for="abundanceRange">📊 Abundance (1–5)</label>
+                    <input type="range" id="abundanceRange" min="1" max="5" step="1" value="3" />
+                    <div class="range-labels">
+                        <span>Rare</span>
+                        <span id="abundanceDisplay" class="abundance-display">3</span>
+                        <span>Abundant</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="photoInput">📸 Photo</label>
+                <div class="photo-upload-area">
+                    <input type="file" id="photoInput" accept="image/*" capture="environment" />
+                    <div class="photo-upload-label">
+                        <span class="upload-icon">📷</span>
+                        <span>Tap to take photo or upload</span>
+                    </div>
+                </div>
+                <div id="photoPreview" class="photo-preview"></div>
+            </div>
+
+            <div class="action-row">
+                <button class="btn btn-primary btn-full" id="saveBtn">
+                    💾 SAVE OBSERVATION
+                </button>
+                <button class="btn btn-secondary" id="exportCsvBtn">
+                    📎 CSV
+                </button>
+                <button class="btn btn-secondary" id="exportGeoJsonBtn">
+                    🗺️ GeoJSON
+                </button>
+                <button class="btn btn-danger" id="clearAllBtn">
+                    🗑️ Clear All
+                </button>
+            </div>
+        </div>
+
+        <!-- Observations Card -->
+        <div class="card observations-card">
+            <div class="card-header">
+                <h2>📋 My Observations</h2>
+                <span class="badge" id="obsCount">0</span>
+            </div>
+            <div id="observationList" class="obs-list">
+                <div class="empty-state">
+                    <span class="emoji">🌱</span>
+                    <p>No observations yet</p>
+                    <span class="sub-text">Start your field research by adding your first plant record</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- About Card -->
+        <div class="card about-card">
+            <div class="card-header">
+                <h2>ℹ️ About</h2>
+                <span class="card-badge">About the creator</span>
+            </div>
+            <div class="card-body">
+                <p style="color:var(--text-light);line-height:1.6;">
+                    Greenspace was developed by <strong>Chuma Khuliso Manuel</strong>, currently completing an Honours degree in Botany at the University of Venda. This application is a solo project born from a desire to simplify field data collection for researchers. Chuma hopes to secure funding to publish and further develop the app so he can build more tools that support researchers and advance field science.
+                </p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="assets/logo-small.png" alt="Chuma Khuliso" class="footer-logo" id="footerLogo">
+                    <div class="footer-info">
+                        <strong>Chuma Khuliso</strong> — Honours (Botany), University of Venda<br />
+                        <a href="mailto:ChumaGrandmaster@gmail.com">ChumaGrandmaster@gmail.com</a> · 
+                        <a href="tel:+27640998449">064 099 8449</a>
+                    </div>
+                </div>
+                <div class="footer-note">
+                    Offline storage · CSV / GeoJSON export<br />
+                    <span style="opacity: 0.6;">All data stored locally on this device</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- App JS -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ----- WELCOME SCREEN -----
+            const welcomeOverlay = document.getElementById('welcomeOverlay');
+            const enterBtn = document.getElementById('enterAppBtn');
+
+            // Always show welcome on each launch
+            enterBtn.addEventListener('click', function() {
+                welcomeOverlay.classList.add('hidden');
+                // Try to get location after welcome
+                setTimeout(function() {
+                    if (navigator.geolocation) {
+                        navigator.permissions.query({ name: 'geolocation' }).then(function(result) {
+                            if (result.state === 'granted') {
+                                document.getElementById('getGpsBtn').click();
+                            }
+                        }).catch(function() {});
+                    }
+                }, 1000);
+            });
+
+            // ----- STATE -----
+            let observations = [];
+            let currentPhotoData = null;
+            let currentMapUrl = '';
+            let map = null;
+            let mapMarker = null;
+
+            // ----- DOM REFS -----
+            const plantName = document.getElementById('plantName');
+            const gpsInput = document.getElementById('gpsInput');
+            const notesInput = document.getElementById('notesInput');
+            const soilType = document.getElementById('soilType');
+            const weatherSelect = document.getElementById('weatherSelect');
+            const slopeSelect = document.getElementById('slopeSelect');
+            const plantHeight = document.getElementById('plantHeight');
+            const flowerColour = document.getElementById('flowerColour');
+            const abundanceRange = document.getElementById('abundanceRange');
+            const abundanceDisplay = document.getElementById('abundanceDisplay');
+            const photoInput = document.getElementById('photoInput');
+            const photoPreview = document.getElementById('photoPreview');
+            const locationStatus = document.getElementById('locationStatus');
+            const miniMap = document.getElementById('miniMap');
+            const obsList = document.getElementById('observationList');
+            const obsCount = document.getElementById('obsCount');
+            const toast = document.getElementById('toast');
+
+            // ----- TOAST -----
+            let toastTimeout = null;
+
+            function showToast(message, type) {
+                type = type || 'success';
+                toast.textContent = message;
+                toast.className = 'toast ' + type;
+                void toast.offsetWidth;
+                toast.classList.add('show');
+                clearTimeout(toastTimeout);
+                toastTimeout = setTimeout(function() {
+                    toast.classList.remove('show');
+                }, 4000);
+            }
+
+            // ----- MAP -----
+            function initMap() {
+                if (map) return;
+                try {
+                    map = L.map(miniMap, {
+                        zoomControl: true,
+                        attributionControl: true
+                    }).setView([-25.0, 28.0], 5);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap'
+                    }).addTo(map);
+
+                } catch (e) {
+                    miniMap.innerHTML = `
+                        <div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f0f4f2;color:#4d6e5d;flex-direction:column;padding:20px;text-align:center;">
+                            <div style="font-size:32px;margin-bottom:6px;">🗺️</div>
+                            <div style="font-weight:500;">Map unavailable</div>
+                            <div style="font-size:13px;margin-top:4px;">GPS coordinates are still captured</div>
+                        </div>
+                    `;
+                }
+            }
+
+            function updateMap(lat, lon) {
+                try {
+                    initMap();
+                    if (!map) return;
+                    if (!mapMarker) {
+                        mapMarker = L.marker([lat, lon]).addTo(map);
+                    } else {
+                        mapMarker.setLatLng([lat, lon]);
+                    }
+                    map.setView([lat, lon], 16);
+                    currentMapUrl = 'https://www.openstreetmap.org/?mlat=' + lat + '&mlon=' + lon + '#map=18/' + lat + '/' + lon;
+                } catch (e) {}
+            }
+
+            // ----- STORAGE -----
+            function loadObservations() {
+                try {
+                    var stored = localStorage.getItem('field_observations');
+                    observations = stored ? JSON.parse(stored) : [];
+                } catch (e) {
+                    observations = [];
+                }
+                renderList();
+            }
+
+            function saveObservations() {
+                try {
+                    localStorage.setItem('field_observations', JSON.stringify(observations));
+                } catch (e) {
+                    showToast('Failed to save data', 'error');
+                }
+                renderList();
+            }
+
+            // ----- RENDER -----
+            function renderList() {
+                obsCount.textContent = observations.length;
+
+                if (!observations.length) {
+                    obsList.innerHTML = `
+                        <div class="empty-state">
+                            <span class="emoji">🌱</span>
+                            <p>No observations yet</p>
+                            <span class="sub-text">Start your field research by adding your first plant record</span>
+                        </div>
+                    `;
+                    return;
+                }
+
+                var html = '';
+                var reversed = observations.slice().reverse();
+
+                for (var i = 0; i < reversed.length; i++) {
+                    var obs = reversed[i];
+                    var realIdx = observations.length - 1 - i;
+                    var date = new Date(obs.timestamp).toLocaleString('en-ZA', {
+                        dateStyle: 'medium',
+                        timeStyle: 'short'
+                    });
+
+                    var flowerSwatch = obs.flowerColour ?
+                        '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:' + escapeHtml(obs.flowerColour) + ';border:1px solid rgba(0,0,0,0.08);vertical-align:middle;"></span>' :
+                        '';
+
+                    var photoHtml = obs.photoData ?
+                        '<img src="' + obs.photoData + '" class="obs-photo" alt="Plant photo" />' :
+                        '';
+
+                    var notesPreview = obs.notes ? escapeHtml(obs.notes.slice(0, 50)) : '';
+                    if (obs.notes && obs.notes.length > 50) notesPreview += '…';
+
+                    html += `
+                        <div class="obs-item" data-index="${realIdx}">
+                            <div class="obs-header">
+                                <span class="obs-name">🌾 ${escapeHtml(obs.plantName)}</span>
+                                <span class="obs-date">${date}</span>
+                            </div>
+                            <div class="obs-meta">
+                                <span>📍 ${escapeHtml(obs.gps || '—')}</span>
+                                ${obs.mapUrl ? '<span>🗺️ <a href="' + escapeHtml(obs.mapUrl) + '" target="_blank" style="color:#1d5b3e;font-weight:500;">View on map</a></span>' : ''}
+                            </div>
+                            <div class="obs-meta">
+                                <span class="obs-tag">📝 ${notesPreview || '—'}</span>
+                            </div>
+                            <div class="obs-meta">
+                                <span class="obs-tag">🌱 ${escapeHtml(obs.soilType || '—')}</span>
+                                <span class="obs-tag">☀️ ${escapeHtml(obs.weather || '—')}</span>
+                                <span class="obs-tag">⛰️ ${escapeHtml(obs.slope || '—')}</span>
+                                <span class="obs-tag">📏 ${escapeHtml(obs.plantHeight || '—')}</span>
+                                <span class="obs-tag">🌸 ${escapeHtml(obs.flowerColour || '—')} ${flowerSwatch}</span>
+                                <span class="obs-tag">📊 ${escapeHtml(obs.abundance || '—')}/5</span>
+                            </div>
+                            ${photoHtml}
+                            <div class="obs-actions">
+                                <button class="btn btn-danger btn-sm delete-btn" data-index="${realIdx}">🗑️ Remove</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                obsList.innerHTML = html;
+
+                var deleteBtns = document.querySelectorAll('.delete-btn');
+                for (var j = 0; j < deleteBtns.length; j++) {
+                    deleteBtns[j].addEventListener('click', function(e) {
+                        var idx = parseInt(this.dataset.index);
+                        if (confirm('Delete this observation?')) {
+                            observations.splice(idx, 1);
+                            saveObservations();
+                            showToast('Observation deleted');
+                        }
+                    });
+                }
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/[&<>"]/g, function(m) {
+                    if (m === '&') return '&amp;';
+                    if (m === '<') return '&lt;';
+                    if (m === '>') return '&gt;';
+                    if (m === '"') return '&quot;';
+                    return m;
+                });
+            }
+
+            function updateLocationStatus(msg, isError) {
+                locationStatus.textContent = msg;
+                locationStatus.style.color = isError ? '#b34e4e' : '#1a4d36';
+            }
+
+            // ----- GPS -----
+            document.getElementById('getGpsBtn').addEventListener('click', function() {
+                if (!navigator.geolocation) {
+                    updateLocationStatus('GPS not supported by this browser.', true);
+                    showToast('GPS not supported', 'error');
+                    return;
+                }
+
+                updateLocationStatus('Getting location...');
+                showToast('Getting GPS location...');
+
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        var lat = pos.coords.latitude.toFixed(6);
+                        var lon = pos.coords.longitude.toFixed(6);
+                        var gpsStr = lat + ', ' + lon;
+                        gpsInput.value = gpsStr;
+                        updateLocationStatus('GPS: ' + gpsStr);
+                        updateMap(parseFloat(lat), parseFloat(lon));
+                        showToast('GPS captured');
+                    },
+                    function(err) {
+                        var msg = 'GPS error. Type manually.';
+                        if (err.code === 1) msg = 'Permission denied. Enable location.';
+                        else if (err.code === 2) msg = 'Location unavailable. Try again.';
+                        else if (err.code === 3) msg = 'Timeout. Retry.';
+                        updateLocationStatus(msg, true);
+                        showToast(msg, 'error');
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 15000,
+                        maximumAge: 10000
+                    }
+                );
+            });
+
+            document.getElementById('copyCoordsBtn').addEventListener('click', function() {
+                var coords = gpsInput.value.trim();
+                if (!coords) {
+                    updateLocationStatus('No GPS to copy.', true);
+                    return;
+                }
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(coords).then(function() {
+                        updateLocationStatus('Coordinates copied');
+                        showToast('Coordinates copied');
+                    }).catch(function() {
+                        gpsInput.select();
+                        document.execCommand('copy');
+                        updateLocationStatus('Coordinates copied');
+                        showToast('Coordinates copied');
+                    });
+                } else {
+                    gpsInput.select();
+                    document.execCommand('copy');
+                    updateLocationStatus('Coordinates copied');
+                    showToast('Coordinates copied');
+                }
+            });
+
+            // ----- ABUNDANCE -----
+            abundanceRange.addEventListener('input', function() {
+                abundanceDisplay.textContent = this.value;
+            });
+
+            // ----- PHOTO -----
+            photoInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        currentPhotoData = ev.target.result;
+                        photoPreview.innerHTML = `
+                            <img src="${currentPhotoData}" alt="Preview" />
+                            <span class="remove-photo" id="removePhotoBtn">✕ Remove</span>
+                        `;
+                        document.getElementById('removePhotoBtn').addEventListener('click', function() {
+                            currentPhotoData = null;
+                            photoInput.value = '';
+                            photoPreview.innerHTML = '';
+                            showToast('Photo removed');
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    currentPhotoData = null;
+                    photoPreview.innerHTML = '';
+                }
+            });
+
+            // ----- SAVE -----
+            document.getElementById('saveBtn').addEventListener('click', function() {
+                var name = plantName.value.trim();
+                if (!name) {
+                    showToast('Please enter a plant name.', 'error');
+                    plantName.focus();
+                    return;
+                }
+
+                var gps = gpsInput.value.trim();
+                var notes = notesInput.value.trim();
+                var soil = soilType.value;
+                var weather = weatherSelect.value;
+                var slope = slopeSelect.value;
+                var height = plantHeight.value.trim();
+                var colour = flowerColour.value;
+                var abundance = abundanceRange.value;
+
+                var mapUrl = currentMapUrl || '';
+                if (!mapUrl && gps) {
+                    var match = gps.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                    if (match) {
+                        mapUrl = 'https://www.openstreetmap.org/?mlat=' + match[1] + '&mlon=' + match[2] + '#map=18/' + match[1] + '/' + match[2];
+                    }
+                }
+
+                var newObs = {
+                    id: Date.now(),
+                    plantName: name,
+                    gps: gps || 'not recorded',
+                    notes: notes || '',
+                    soilType: soil || '',
+                    weather: weather || '',
+                    slope: slope || '',
+                    plantHeight: height ? height + ' cm' : '',
+                    flowerColour: colour || '',
+                    abundance: abundance || '3',
+                    mapUrl: mapUrl || '',
+                    photoData: currentPhotoData || null,
+                    timestamp: new Date().toISOString()
+                };
+
+                observations.push(newObs);
+                saveObservations();
+                showToast('Observation saved');
+
+                plantName.value = '';
+                gpsInput.value = '';
+                notesInput.value = '';
+                soilType.value = '';
+                weatherSelect.value = '';
+                slopeSelect.value = '';
+                plantHeight.value = '';
+                flowerColour.value = '#7f8c8d';
+                abundanceRange.value = '3';
+                abundanceDisplay.textContent = '3';
+                photoInput.value = '';
+                currentPhotoData = null;
+                photoPreview.innerHTML = '';
+                currentMapUrl = '';
+                if (mapMarker && map) {
+                    map.removeLayer(mapMarker);
+                    mapMarker = null;
+                }
+                updateLocationStatus('Observation saved');
+            });
+
+            // ----- EXPORTS -----
+            document.getElementById('exportCsvBtn').addEventListener('click', function() {
+                if (!observations.length) {
+                    showToast('No data to export.', 'error');
+                    return;
+                }
+
+                var headers = ['PlantName', 'GPS', 'Notes', 'SoilType', 'Weather', 'Slope', 'PlantHeight', 'FlowerColour', 'Abundance', 'MapURL', 'Timestamp'];
+                var rows = [headers.join(',')];
+
+                for (var i = 0; i < observations.length; i++) {
+                    var o = observations[i];
+                    var row = [
+                        '"' + o.plantName.replace(/"/g, '""') + '"',
+                        '"' + (o.gps || '').replace(/"/g, '""') + '"',
+                        '"' + (o.notes || '').replace(/"/g, '""') + '"',
+                        '"' + (o.soilType || '').replace(/"/g, '""') + '"',
+                        '"' + (o.weather || '').replace(/"/g, '""') + '"',
+                        '"' + (o.slope || '').replace(/"/g, '""') + '"',
+                        '"' + (o.plantHeight || '').replace(/"/g, '""') + '"',
+                        '"' + (o.flowerColour || '').replace(/"/g, '""') + '"',
+                        '"' + (o.abundance || '').replace(/"/g, '""') + '"',
+                        '"' + (o.mapUrl || '').replace(/"/g, '""') + '"',
+                        '"' + o.timestamp + '"'
+                    ];
+                    rows.push(row.join(','));
+                }
+
+                var csvContent = rows.join('\n');
+                var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'field_observations_' + new Date().toISOString().slice(0, 19) + '.csv';
+                link.click();
+                URL.revokeObjectURL(link.href);
+                showToast('CSV exported');
+            });
+
+            document.getElementById('exportGeoJsonBtn').addEventListener('click', function() {
+                if (!observations.length) {
+                    showToast('No data to export.', 'error');
+                    return;
+                }
+
+                var features = [];
+                for (var i = 0; i < observations.length; i++) {
+                    var o = observations[i];
+                    var coords = null;
+                    var match = (o.gps || '').match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                    if (match) {
+                        coords = [parseFloat(match[2]), parseFloat(match[1])];
+                    }
+                    features.push({
+                        type: 'Feature',
+                        geometry: coords ? { type: 'Point', coordinates: coords } : null,
+                        properties: {
+                            name: o.plantName,
+                            notes: o.notes,
+                            soilType: o.soilType,
+                            weather: o.weather,
+                            slope: o.slope,
+                            plantHeight: o.plantHeight,
+                            flowerColour: o.flowerColour,
+                            abundance: o.abundance,
+                            mapUrl: o.mapUrl,
+                            timestamp: o.timestamp
+                        }
+                    });
+                }
+
+                var geojson = {
+                    type: 'FeatureCollection',
+                    features: features
+                };
+
+                var blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/json' });
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'field_observations_' + new Date().toISOString().slice(0, 19) + '.geojson';
+                link.click();
+                URL.revokeObjectURL(link.href);
+                showToast('GeoJSON exported');
+            });
+
+            // ----- CLEAR -----
+            document.getElementById('clearAllBtn').addEventListener('click', function() {
+                if (!observations.length) {
+                    showToast('No data to clear.', 'error');
+                    return;
+                }
+                if (confirm('Delete ALL observations? This action is permanent.')) {
+                    observations = [];
+                    saveObservations();
+                    showToast('All data cleared');
+                }
+            });
+
+            // ----- INIT -----
+            loadObservations();
+
+            // Handle image loading errors gracefully
+            var images = document.querySelectorAll('img');
+            for (var i = 0; i < images.length; i++) {
+                images[i].addEventListener('error', function() {
+                    this.style.display = 'none';
+                });
+            }
+
+        })();
+    </script>
+
+</body>
+</html>
